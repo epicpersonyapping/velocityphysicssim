@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Rocket Escape Simulator</title>
+
+<style>
+body{
+    margin:0;
+    background:#000814;
+    color:white;
+    font-family:Arial,sans-serif;
+    overflow:hidden;
+}
+
+#ui{
+    position:absolute;
+    top:10px;
+    left:10px;
+    background:rgba(0,0,0,.6);
+    padding:15px;
+    border-radius:10px;
+    z-index:10;
+}
+
+select{
+    padding:5px;
+}
+
+canvas{
+    display:block;
+}
+</style>
+</head>
+<body>
+
+<div id="ui">
+    <h2>🚀 Rocket Escape Simulator</h2>
+
+    Planet:
+    <select id="planet">
+        <option>Mercury</option>
+        <option>Venus</option>
+        <option selected>Earth</option>
+        <option>Mars</option>
+        <option>Jupiter</option>
+        <option>Saturn</option>
+        <option>Uranus</option>
+        <option>Neptune</option>
+    </select>
+
+    <button onclick="startMission()">Start Mission</button>
+
+    <hr>
+
+    <div id="stats"></div>
+
+    <p>
+    Hold SPACE to thrust
+    </p>
+</div>
+
+<canvas id="game"></canvas>
+
+<script>
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const planets = {
+Mercury:{g:3.7,escape:4.25,color:"#888"},
+Venus:{g:8.87,escape:10.36,color:"#d2a679"},
+Earth:{g:9.81,escape:11.19,color:"#2f7fff"},
+Mars:{g:3.71,escape:5.03,color:"#c1440e"},
+Jupiter:{g:24.79,escape:59.5,color:"#c9a066"},
+Saturn:{g:10.44,escape:35.5,color:"#f2d16b"},
+Uranus:{g:8.69,escape:21.3,color:"#77ffff"},
+Neptune:{g:11.15,escape:23.5,color:"#4f6dff"}
+};
+
+let planet;
+let altitude;
+let velocity;
+let fuel;
+let gameRunning=false;
+let escaped=false;
+
+let thrusting=false;
+
+document.addEventListener("keydown",e=>{
+if(e.code==="Space") thrusting=true;
+});
+
+document.addEventListener("keyup",e=>{
+if(e.code==="Space") thrusting=false;
+});
+
+const stars=[];
+
+for(let i=0;i<200;i++){
+stars.push({
+x:Math.random()*canvas.width,
+y:Math.random()*canvas.height,
+r:Math.random()*2
+});
+}
+
+function startMission(){
+
+planet=planets[
+document.getElementById("planet").value
+];
+
+altitude=0;
+velocity=0;
+fuel=100;
+
+escaped=false;
+gameRunning=true;
+}
+
+startMission();
+
+function update(){
+
+if(!gameRunning) return;
+
+const gravityEffect=planet.g*0.002;
+
+if(thrusting && fuel>0){
+
+velocity+=0.06;
+fuel-=0.15;
+
+}else{
+
+velocity-=gravityEffect;
+}
+
+altitude+=velocity;
+
+if(altitude<0){
+
+altitude=0;
+
+if(velocity<-2){
+
+gameRunning=false;
+
+alert("💥 Rocket Crashed!");
+}
+
+velocity=0;
+}
+
+if(
+velocity>=planet.escape/10 &&
+altitude>2000
+){
+
+escaped=true;
+gameRunning=false;
+
+alert("🎉 Escape Velocity Achieved!");
+}
+}
+
+function drawPlanet(){
+
+ctx.fillStyle=planet.color;
+
+ctx.beginPath();
+
+ctx.arc(
+canvas.width/2,
+canvas.height+250,
+400,
+0,
+Math.PI*2
+);
+
+ctx.fill();
+}
+
+function drawRocket(){
+
+let y=canvas.height-120-altitude*0.15;
+
+ctx.fillStyle="white";
+
+ctx.fillRect(
+canvas.width/2-10,
+y,
+20,
+50
+);
+
+ctx.fillStyle="orange";
+
+ctx.beginPath();
+
+ctx.moveTo(canvas.width/2-10,y);
+ctx.lineTo(canvas.width/2,y-20);
+ctx.lineTo(canvas.width/2+10,y);
+
+ctx.fill();
+
+if(thrusting && fuel>0){
+
+ctx.fillStyle="yellow";
+
+ctx.beginPath();
+
+ctx.moveTo(canvas.width/2-7,y+50);
+ctx.lineTo(canvas.width/2,y+75+Math.random()*20);
+ctx.lineTo(canvas.width/2+7,y+50);
+
+ctx.fill();
+}
+}
+
+function drawStars(){
+
+ctx.fillStyle="white";
+
+for(let s of stars){
+
+ctx.beginPath();
+ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+ctx.fill();
+}
+}
+
+function draw(){
+
+ctx.clearRect(0,0,canvas.width,canvas.height);
+
+drawStars();
+drawPlanet();
+drawRocket();
+
+document.getElementById("stats").innerHTML=
+`
+Altitude: ${Math.floor(altitude)} km<br>
+Velocity: ${velocity.toFixed(2)} km/s<br>
+Fuel: ${Math.max(0,fuel).toFixed(0)}%<br>
+Gravity: ${planet.g} m/s²<br>
+Escape Velocity: ${planet.escape} km/s
+`;
+}
+
+function gameLoop(){
+
+update();
+draw();
+
+requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+
+</script>
+</body>
+</html>
